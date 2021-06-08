@@ -40,6 +40,16 @@ class ToTensor(object):
         elif image.ndim==3:
             output = torch.from_numpy(image)
         return output
+    
+class HistogramEqualisation(object):
+    def __init__(self, sample_keys_images):
+        self.sample_keys_images = sample_keys_images
+    def __call__(self, sample):
+        for key_idx in self.sample_keys_images:
+            image = sample[key_idx]
+            image = skimage.exposure.equalize_hist(image)
+            sample[key_idx] = image
+        return sample
 
 class CLAHE(object):
     def __init__(self, sample_keys_images):
