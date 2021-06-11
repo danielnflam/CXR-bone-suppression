@@ -12,8 +12,6 @@ File contains transformations as callable classes.
 
 """
 
-
-
 class ToTensor(object):
     """
     Torch transforms generally work on Torch tensor datasets best.
@@ -192,9 +190,9 @@ class Rescale(object):
 
             new_h, new_w = int(new_h), int(new_w)
 
-            if len(image.shape)==2:
+            #if len(image.shape)==2:
                 # Skimage transform
-                out = transform.resize(image, (new_h, new_w), order=0)
+            out = transform.resize(image, (new_h, new_w), order=0)
             
             sample[key_idx] = out
             

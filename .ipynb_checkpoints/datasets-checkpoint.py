@@ -6,6 +6,7 @@ import os, sys, time, datetime, pathlib, random, math
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms as tvtransforms
 from skimage import io, transform
+from PIL import Image
 
 # HELPER FUNCTION
 def _check_if_array_3D(source_image, boneless_image=None):
@@ -82,10 +83,10 @@ class JSRT_CXR(Dataset):
         if "boneless" in self.data.keys():
             boneless_image = plt.imread(self.data["boneless"].iloc[idx])
             source_image, boneless_image = _check_if_array_3D(source_image, boneless_image)
-            sample = {'source': source_image, 'boneless': boneless_image} #'patientCode': patient_code
+            sample = {'source': source_image, 'boneless': boneless_image, 'Patient': patient_code}
         else:
             source_image = _check_if_array_3D(source_image, None)
-            sample = {'source': source_image} #'patientCode': patient_code
+            sample = {'source': source_image, 'Patient': patient_code}
 
         if self.transform:
             sample = self.transform(sample)
@@ -138,9 +139,79 @@ class POLYU_COVID19_CXR_CT_Cohort1(Dataset):
         source_image = plt.imread(self.data["source"].iloc[idx])
         source_image = _check_if_array_3D(source_image)
         
-        sample = {'source': source_image} #'patientCode': patient_code
+        sample = {'source': source_image, 'Patient': patient_code}
         
         if self.transform:
             sample = self.transform(sample)
         
         return sample
+    
+class DongrongCOVIDDataset(Dataset):
+    def __init__(self, normal_path, pneumonia_path, covid_path, transform=None):
+        """
+        Args:
+            [normal, pneumonia, covid]_path: path to image directory containing [normal, pneumonia, covid] images.
+            transform: optional transform to be applied on a sample.
+        """
+        image_names=[]
+        labels=[]
+        #normal_path= os.path.join(dataset_path,'NORMAL')
+        #pneumonia_path= os.path.join(dataset_path,'PNEUMONIA')
+        #covid_path=os.path.join(dataset_path,'COVID')
+        
+        if normal_path is not None:
+            normalDir = os.listdir(normal_path)
+            for allDir in normalDir:
+                normal_image_name = os.path.join('%s\\%s' % (normal_path, allDir))
+                image_names.append(normal_image_name)
+                label=0
+                labels.append(label)
+        if pneumonia_path is not None:
+            pneumoniaDir = os.listdir(pneumonia_path)
+            for allDir in pneumoniaDir:
+                pneumonia_image_name = os.path.join(pneumonia_path, allDir)
+                image_names.append(pneumonia_image_name)
+                label=1
+                labels.append(label)
+        
+        if covid_path is not None:
+            covidDir = os.listdir(covid_path)
+            for allDir in covidDir:
+                covid_image_name = os.path.join('%s\\%s' % (covid_path, allDir))
+                image_names.append(covid_image_name)
+                label = 2
+                labels.append(label)
+        
+        package=list(zip(image_names,labels))
+        random.shuffle(package)
+        image_names[:],labels[:]=zip(*package)
+        
+        self.image_names = image_names
+        self.labels = labels
+        self.transform = transform
+        
+    def __len__(self):
+        return len(self.labels)
+    def __getitem__(self, index):
+        """
+        Do not convert image to RGB for bone suppression
+        Input:
+            index: the index of item
+        Output:
+            sample: a dict with the fields:
+                "source": the image
+                "label": the label associated with the image
+                "Patient": the name of the image file
+        """
+        image_name = self.image_names[index]
+        patient_code = os.path.splitext(image_name)[0]
+        image = Image.open(image_name) # do NOT convert to RGB for bone suppression
+        
+        # For Rajaraman, don't care about whether the image is normal, pneumonia or covid
+        label = self.labels[index]
+        sample = {'source': image, 'label':label, 'Patient': patient_code}
+        if self.transform is not None:
+            sample = self.transform(sample)
+            
+        return sample  #, torch.tensor(label)#torch.FloatTensor(label)
+        
