@@ -28,6 +28,25 @@ class ToTensor(object):
             sample[key_idx] = out
         return sample
 
+class RandomAutocontrast(object):
+    """This is for grayscale (HxWx1) PIL images.
+    This function calculates a histogram of the input image (or mask region), removes cutoff percent of the lightest and darkest pixels from the histogram, and remaps the image so that the darkest pixel becomes black (0), and the lightest becomes white (255).
+    """
+    def __init__(self, sample_keys_images, cutoff_limits=(0.05,0.05)):
+        self.sample_keys_images = sample_keys_images
+        self.cutoff_limits = cutoff_limits # proportions
+    def __call__(self, sample):
+        
+        cutoff_min = np.random.uniform(0, 100*self.cutoff_limits[0])
+        cutoff_max = np.random.uniform(0, 100*self.cutoff_limits[1])
+        
+        for key_idx in self.sample_keys_images:
+            image = sample[key_idx]
+            # processing
+            image = ImageOps.autocontrast(image, (cutoff_min, cutoff_max), ignore=None, mask=None, preserve_tone=False)
+            sample[key_idx] = image
+        return sample
+    
 class HistogramEqualisation(object):
     """
     Works for PIL images only.
