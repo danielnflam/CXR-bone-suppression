@@ -108,11 +108,18 @@ class RandomHorizontalFlip(object):
     def __init__(self, sample_keys_images, probability=0.5):
         self.probability = probability
         self.sample_keys_images = sample_keys_images
-        self.tform = transforms.RandomHorizontalFlip(self.probability)
+    
+    def tform(self, image, input_prob):
+        if input_prob < self.probability:
+            out_image = TF.hflip(image)
+        else:
+            out_image = image
+        return out_image
     def __call__(self, sample):
+        input_prob = np.random.uniform()
         for key_idx in self.sample_keys_images:
             image = sample[key_idx]
-            out = self.tform(image)
+            out = self.tform(image, input_prob)
             sample[key_idx] = out
         return sample
 
@@ -135,7 +142,6 @@ class RandomAffine(object):
         # Identify mean intensity in diaphragm area
         width, height = normal.size
         min_intensity, max_intensity = normal.getextrema()
-        
         lowest10percent = round(height*0.9)
         average_intensity_threshold = (max_intensity - min_intensity)//2 + min_intensity
         test = np.array(normal.copy())
@@ -163,7 +169,6 @@ class RandomAffine(object):
         sample[self.sample_keys_images[0]] = image
         sample[self.sample_keys_images[1]] = suppressed
         return sample
-        
         
 ####################
 # TORCH TENSORS ONLY
@@ -199,5 +204,56 @@ class ImageComplement(object):
             sample[key_idx] = image
         return sample
     
-
+class StandardiseMonochrome(object):
+    def __init__(self, sample_keys_images, standard="MONOCHROME1"):
+        """standard should either be: MONOCHROME1 or MONOCHROME2"""
+        self.sample_keys_images = sample_keys_images
+        self.standard = standard
+        
+    def tform(self, image):
+        # Assumes image is [C x H x W] tensor
+        height = image.shape[-2]
+        width = image.shape[-1]
+        min_intensity = torch.min(image)
+        max_intensity = torch.max(image)
+        lowest10percent = round(height*0.9)
+        width_25percent = (round(width*0.25), round(width*0.75))
+        print("Intensity min:{}, max:{}".format(min_intensity, max_intensity))
+        average_intensity_threshold = (max_intensity - min_intensity)/2 + min_intensity
+        test = image.detach()
+        # find diagraphm area
+        average_lowest10percent_intensity = torch.mean(test[ :, lowest10percent:height, min(width_25percent):max(width_25percent)])
+        print("Threshold: {}, average_lowest_10%:{}".format(average_intensity_threshold,average_lowest10percent_intensity))
+        if self.standard == "MONOCHROME1":
+            # bright at 0, dark at 1
+            # i.e. bone should be bright -- hence lowest10% should be bright
+            if average_lowest10percent_intensity < average_intensity_threshold:
+                image = self.intensityComplement(image)
+                has_switched=True
+            else:
+                has_switched=False
+        elif self.standard == "MONOCHROME2":
+            # i.e. dark bone
+            if average_lowest10percent_intensity > average_intensity_threshold:
+                image = self.intensityComplement(image)
+                has_switched=True
+            else:
+                has_switched=False
+        else:
+            raise RuntimeError("self.standard must either be MONOCHROME1 or MONOCHROME2")
+        return image, has_switched
+    
+    def intensityComplement(self,image):
+        max_image = torch.max(image)
+        min_image = torch.min(image)
+        image = (image-min_image)/(max_image-min_image) # range [0,1]
+        image = (1-image)*(max_image-min_image) + min_image
+        return image
+        
+    def __call__(self, sample):
+        for key_idx in self.sample_keys_images:
+            image = sample[key_idx]
+            out,_ = self.tform(image)
+            sample[key_idx] = out
+        return sample
 ##########################################

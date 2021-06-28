@@ -8,6 +8,7 @@ from torchvision import transforms as tvtransforms
 from skimage import io, transform
 from PIL import Image
 
+
 # HELPER FUNCTION
 def _check_if_array_3D(source_image, boneless_image=None):
     # Check if array is 3D or 2D
@@ -79,15 +80,25 @@ class JSRT_CXR(Dataset):
             idx = idx.tolist() # transform into python list
         
         patient_code = self.data["Patient"].iloc[idx]
+        
         source_image = plt.imread(self.data["source"].iloc[idx])
+        source_image = source_image*255
+        source_image = source_image.astype(np.uint8)
+        source_image = Image.fromarray(source_image).convert("L")
+            
         if "boneless" in self.data.keys():
+            
             boneless_image = plt.imread(self.data["boneless"].iloc[idx])
-            source_image, boneless_image = _check_if_array_3D(source_image, boneless_image)
+            boneless_image = boneless_image*255
+            boneless_image = boneless_image.astype(np.uint8)
+            boneless_image = Image.fromarray(boneless_image).convert("L")
+            
+            #source_image, boneless_image = _check_if_array_3D(source_image, boneless_image)
             sample = {'source': source_image, 'boneless': boneless_image, 'Patient': patient_code}
         else:
-            source_image = _check_if_array_3D(source_image, None)
+            #source_image = _check_if_array_3D(source_image, None)
             sample = {'source': source_image, 'Patient': patient_code}
-
+        
         if self.transform:
             sample = self.transform(sample)
         
@@ -102,9 +113,9 @@ class JSRT_CXR(Dataset):
         fig, ax=plt.subplots(1,2)
         ax[0].imshow(sourceIm, cmap="gray")
         ax[1].imshow(bonelessIm, cmap="gray")
-    
-
-
+########################
+# QEH Dataset
+########################
 class POLYU_COVID19_CXR_CT_Cohort1(Dataset):
     def __init__(self, data_normal, transform):
         """
@@ -137,7 +148,10 @@ class POLYU_COVID19_CXR_CT_Cohort1(Dataset):
         
         patient_code = self.data["Patient"].iloc[idx]
         source_image = plt.imread(self.data["source"].iloc[idx])
-        source_image = _check_if_array_3D(source_image)
+        source_image = source_image*255
+        source_image = source_image.astype(np.uint8)
+        source_image = Image.fromarray(source_image).convert("L")
+        #source_image = _check_if_array_3D(source_image)
         
         sample = {'source': source_image, 'Patient': patient_code}
         
@@ -146,6 +160,9 @@ class POLYU_COVID19_CXR_CT_Cohort1(Dataset):
         
         return sample
     
+#########################
+# Dongrong Dataset and similar dataset structures
+#########################
 class DongrongCOVIDDataset(Dataset):
     def __init__(self, normal_path, pneumonia_path, covid_path, transform=None):
         """
@@ -214,4 +231,26 @@ class DongrongCOVIDDataset(Dataset):
             sample = self.transform(sample)
             
         return sample  #, torch.tensor(label)#torch.FloatTensor(label)
-        
+
+#########################
+# Yuhua Dataset
+#########################
+class Yuhua_DDR(Dataset):
+    def __init__(self, external_test_file, transform=None):
+        self.transform = transform
+        # Load data
+        data = np.load(external_test_file) # [H x W x N]
+        # insert channel dim
+        data = np.expand_dims(data,-2) # [H x W x C x N]
+        data = np.flip(data,0)
+        self.data = data # numpy
+    def __len__(self):
+        return self.data.shape[-1]
+    def __getitem__(self, index):
+        image = self.data[:,:,:,index].copy()
+        sample = {'source': image, "Patient":index}
+        if self.transform is not None:
+            sample = self.transform(sample)
+        else:
+            sample['source'] = tvtransforms.ToTensor(image)
+        return sample
