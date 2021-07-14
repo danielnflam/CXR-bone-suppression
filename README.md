@@ -1,45 +1,19 @@
-# Chest X-ray bone suppression toward improving classification and detection of Tuberculosis-consistent findings
-
-Chest X-rays (CXRs) are the most commonly performed diagnostic examination to detect lung-related abnormalities and other complications related to these conditions. However, its use to detect subtle abnormalities is constrained by the presence of bony structures including the ribs and clavicles that obscure these abnormalities and render them undetected. This study aims to build deep learning (DL)-based bone-suppression model that identifies and removes the superimposing bony structures in CXRs to facilitate reducing errors in radiological interpretation related to detecting Tuberculosis (TB)-consistent findings.
-
-Original image             |  Bone-suppressed image
-:-------------------------:|:-------------------------:
-![Alt-Text](image027_source.png)  |  ![Alt-Text](image027_pred.png)
-
-We propose a stagewise, systematic methodology in this study: First, we retrain an ImageNet-trained VGG-16 model on a large-scale, diverse, combined selection of publicly available CXRs to help it learn CXR modality-specific features. The learned knowledge is transferred to improve performance in a related target classification task of classifying CXRs in the publicly available Shenzhen and Montgomery TB collections as showing normal lungs or pulmonary TB manifestations. Next, we train several bone-suppression models with varying architecture on the Japanese Society of Radiological Technology (JSRT) CXR dataset and its bone-suppressed counterpart. The performance of the trained models is tested using the cross-institutional National Institutes of Health (NIH) clinical center (CC) dual-energy subtraction (DES) CXR dataset. The best-performing model is used to suppress bones in the Shenzhen and Montgomery TB collections. We then compare the performance of the CXR-retrained VGG-16 models trained with the non-bone-suppressed and bone-suppressed Montgomery TB datasets using several performance metrics and analyzed them for a statistically significant difference. The predictions of the non-bone-suppressed and bone-suppressed models are interpreted through class-selective relevance maps (CRM).
-
-![alt text](striking_image.png)
-
-![alt text](crm.png)
-
-Compared to other proposed bone-suppression models, the ResNet-BS model demonstrated superior performance with the least combined loss and higher values for peak signal-to-noise ratio, structural similarity index measure (SSIM), and multi-scale structural similarity index measure (MS-SSIM) metrics. 
-
-![alt text](ResNet-BS.png)
-
-For the classification task, we observed that the bone-suppressed models demonstrated superior values for all performance metrics using the Shenzhen and Montgomery TB datasets. The detection of TB-consistent findings in CXRs improved using the bone-suppressed images, signifying that bone suppression improved the sensitivity of the models toward TB detection and localization.
-
-An important contribution of this study is that the models proposed are not limited to bone suppression toward improving TB detection but can potentially be extended to other applications such as improving performance in detecting lung nodules, pneumonia, and COVID-19. With recent advancements in cloud technology, the trained models could be deployed in the cloud for public use and can be implemented in mobile devices.
-
-## Bone Suppression Dataset:
-The researchers from the Budapest University of Technology and Economics used their in-house clavicle and rib–shadow removal algorithms to suppress the bones in the 247 JSRT CXRs and made the bone-suppressed soft-tissue images publicly available at https://www.mit.bme.hu/eng/events/2013/04/18/boneshadow-eliminated-images-jsrt-database. The link is currently broken. We have augmented this dataset to create 4000+ original-bone-suppressed image pairs to train our proposed bone suppression models. The data is available at https://drive.google.com/drive/folders/1m4hlwglZIK14Mlkjf3YsNHRfXLJlfbBN?usp=sharing. Please cite our study if using these data and codes for your research:
-
+# Pytorch implementation of Rajaraman's work
 ### Rajaraman, S.; Zamzmi, G.; Folio, L.; Alderson, P.; Antani, S. Chest X-Ray Bone Suppression for Improving Classification of Tuberculosis-Consistent Findings. Diagnostics 2021, 11, 840. https://doi.org/10.3390/diagnostics11050840
 
-## What is included?
-The Jupyter notebook containing all codes to reproduce this study. It contains:
+A pre-trained model with the weights of the ResNet-BS bone suppression model is included for direct use. Run the model using **analysis_script.ipynb** on 256 x 256 grayscale CXR image to generate a soft-tissue image with suppressed bone shadows.
 
-(i) Steps to train CXR-modality-specific models
+pytorch-msssim is sourced from: https://github.com/jorge-pessoa/pytorch-msssim
 
-(ii) Fine-tune the CXR-modality-specific model for the TB detection task
+### Training:
 
-(iii) Visualize t-SNE embedding with the fine-tuned model
+Use the main.ipynb script.  The settings to change are in the first 2 cells.
 
-(iv) Generate CRM visualizations with the fine-tuned model
+### Inference: 
 
-(v) Train bone-suppression models on the original and bone suppressed counterparts
+Use the analysis_script.ipynb
 
-(vi) Predict bone-suppressed Montgomery CXRs using the trained model.
+### Your own datasets:
 
-We have also included the weights of the best-performing ResNet-BS bone suppression model for direct use. Run the model on 256 x 256 grayscale CXR image to geneate a soft-tissue image with suppressed bone shadows. 
-
+Put your own datasets in datasets.py.  Pre-existing dataset classes are provided as templates.
 
