@@ -68,7 +68,7 @@ class Resize(object):
     Input integer decides the number of column pixels.    
     To keep the aspect ratio the same, use an integer as the input when initialising this object.
     """
-    def __init__(self, sample_keys_images, output_size):
+    def __init__(self, sample_keys_images, output_size, interp_mode=TF.InterpolationMode.BILINEAR):
         """
         Inputs:
             output_size (tuple or int): Desired output size. If tuple, output is
@@ -79,7 +79,7 @@ class Resize(object):
         assert isinstance(output_size, (int, tuple))
         self.output_size = output_size
         self.sample_keys_images = sample_keys_images
-        self.tform = transforms.Resize(self.output_size)
+        self.tform = transforms.Resize(self.output_size, interp_mode)
     def __call__(self, sample):
         """
         Inputs:
